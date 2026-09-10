@@ -219,8 +219,8 @@ uvicorn src.main:app --reload
 
 ## Demo
 
-- Live Demo: `<YOUR_LIVE_DEMO_LINK>`
-- Demo Video: `<YOUR_DEMO_VIDEO_LINK>`
+Presntation and demo video 
+https://drive.google.com/drive/folders/1hxjBAb_CdZ6ZwjRdHiFKse8WE94SsHZR?usp=drive_link
 
 ## Screenshots
 
