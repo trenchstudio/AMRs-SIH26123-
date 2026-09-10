@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>AMR Fleet — Decentralized Coordination Sim</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0D1420;
+    --panel: #141E2C;
+    --panel-2: #101826;
+    --line: #24344A;
+    --line-soft: #1B2738;
+    --text: #E7EDF5;
+    --text-dim: #7E8FA6;
+    --text-faint: #4C5B72;
+    --amber: #E8A33D;
+    --cyan: #45C4C0;
+    --rose: #E0698A;
+    --lime: #9BCB6E;
+    --danger: #E0566A;
+    --good: #55C79A;
+    --shelf: #24344E;
+    --shelf-line: #35486A;
+  }
+  * { box-sizing: border-box; }
+  html, body{
+    margin:0; padding:0; background: var(--bg); color: var(--text);
+    font-family: 'Space Grotesk', sans-serif;
+  }
+  .mono{ font-family: 'IBM Plex Mono', monospace; }
+
+  .wrap{ max-width: 1180px; margin: 0 auto; padding: 28px 20px 48px; }
+
+  header{
+    display:flex; align-items:flex-end; justify-content:space-between;
+    gap: 20px; margin-bottom: 22px; flex-wrap: wrap;
+    border-bottom: 1px solid var(--line-soft); padding-bottom: 18px;
+  }
+  header h1{
+    margin:0; font-size: 26px; font-weight: 700; letter-spacing: -0.01em;
+  }
+  header h1 span{ color: var(--cyan); }
+  header p{ margin: 6px 0 0; color: var(--text-dim); font-size: 14px; max-width: 480px; line-height: 1.5;}
+  .ps-tag{
+    font-family:'IBM Plex Mono', monospace; font-size: 11px; color: var(--text-faint);
+    letter-spacing: 0.02em;
+  }
+
+  .layout{ display:grid; grid-template-columns: 1fr 320px; gap: 18px; }
+  @media (max-width: 880px){ .layout{ grid-template-columns: 1fr; } }
+
+  .card{
+    background: var(--panel); border: 1px solid var(--line-soft); border-radius: 10px;
+    padding: 16px;
+  }
+
+  .stage-card{ padding: 16px 16px 12px; }
+  .stage-top{
+    display:flex; align-items:center; justify-content:space-between; margin-bottom: 12px;
+    flex-wrap: wrap; gap: 10px;
+  }
+  .mode-toggle{
+    display:flex; background: var(--panel-2); border:1px solid var(--line); border-radius: 8px; padding: 3px;
+  }
+  .mode-toggle button{
+    border:none; background: transparent; color: var(--text-dim); padding: 7px 14px;
+    font-family:'Space Grotesk'; font-size: 13px; font-weight: 600; border-radius: 6px; cursor:pointer;
+  }
+  .mode-toggle button.active{ background: var(--line); color: var(--text); }
+
+  .run-controls{ display:flex; align-items:center; gap: 8px; flex-wrap: wrap; }
+  button.btn{
+    font-family:'Space Grotesk'; font-weight:600; font-size: 13px; cursor:pointer;
+    border-radius: 7px; padding: 8px 14px; border: 1px solid var(--line);
+    background: var(--panel-2); color: var(--text);
+  }
+  button.btn:hover{ border-color: var(--cyan); }
+  button.btn.primary{ background: var(--cyan); color: #06211f; border-color: var(--cyan); }
+  button.btn.primary:hover{ filter: brightness(1.08); }
+  button.btn.ghost{ background: transparent; }
+  button.btn:disabled{ opacity: 0.4; cursor: not-allowed; }
+
+  .speed-row{ display:flex; align-items:center; gap:8px; color: var(--text-dim); font-size: 12px; }
+  input[type=range]{ width: 90px; accent-color: var(--cyan); }
+
+  canvas{ display:block; width: 100%; height: auto; background: var(--panel-2); border-radius: 8px; border: 1px solid var(--line); }
+
+  .legend{ display:flex; gap: 16px; flex-wrap: wrap; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line-soft);}
+  .legend-item{ display:flex; align-items:center; gap: 6px; font-size: 11.5px; color: var(--text-dim); }
+  .swatch{ width: 10px; height: 10px; border-radius: 3px; display:inline-block; }
+
+  .side{ display:flex; flex-direction: column; gap: 14px; }
+
+  .metrics-grid{ display:grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 4px;}
+  .metric{
+    background: var(--panel-2); border:1px solid var(--line-soft); border-radius: 8px; padding: 10px 12px;
+  }
+  .metric .label{ font-size: 10.5px; color: var(--text-faint); text-transform: none; letter-spacing: 0.01em; }
+  .metric .value{ font-family:'IBM Plex Mono'; font-size: 19px; font-weight: 600; margin-top: 3px; }
+  .metric .value.good{ color: var(--good); }
+  .metric .value.warn{ color: var(--amber); }
+
+  .section-title{ font-size: 13px; font-weight: 600; color: var(--text); margin: 0 0 10px; }
+  .section-title small{ color: var(--text-faint); font-weight: 400; }
+
+  .robot-row{
+    display:flex; align-items:center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line-soft);
+  }
+  .robot-row:last-child{ border-bottom: none; }
+  .dot{ width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
+  .robot-info{ flex:1; min-width:0; }
+  .robot-info .name{ font-size: 12.5px; font-weight: 600; }
+  .robot-info .status{ font-size: 11px; color: var(--text-dim); font-family:'IBM Plex Mono'; }
+  .batt{ width: 42px; text-align:right; font-family:'IBM Plex Mono'; font-size: 11px; color: var(--text-dim); }
+
+  .log{
+    height: 150px; overflow-y: auto; font-family:'IBM Plex Mono'; font-size: 11px; line-height: 1.6;
+    color: var(--text-dim); padding-right: 4px;
+  }
+  .log div{ border-bottom: 1px dashed var(--line-soft); padding: 3px 0; }
+  .log div span{ color: var(--text-faint); }
+  .log::-webkit-scrollbar{ width: 5px; }
+  .log::-webkit-scrollbar-thumb{ background: var(--line); border-radius: 3px; }
+
+  .compare-banner{
+    display:none; margin-top: 14px; padding: 14px; border-radius: 8px;
+    background: linear-gradient(135deg, rgba(69,196,192,0.14), rgba(69,196,192,0.03));
+    border: 1px solid rgba(69,196,192,0.35);
+  }
+  .compare-banner.show{ display:block; }
+  .compare-banner .big{ font-family:'IBM Plex Mono'; font-size: 24px; font-weight: 600; color: var(--good); }
+  .compare-banner .sub{ font-size: 12px; color: var(--text-dim); margin-top: 4px; }
+
+  .note{
+    font-size: 11.5px; color: var(--text-faint); line-height: 1.6; margin-top: 16px;
+    padding-top: 14px; border-top: 1px solid var(--line-soft);
+  }
+  .note b{ color: var(--text-dim); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div>
+      <h1>AMR Fleet <span>/ Coordination Sim</span></h1>
+      <p>A decentralized multi-robot warehouse simulation — peer priority resolves conflicts locally, no central server dispatches moves.</p>
+    </div>
+    <div class="ps-tag">PS 26123 — EDGE-AI DISTRIBUTED FLEET COORDINATION</div>
+  </header>
+
+  <div class="layout">
+
+    <div class="card stage-card">
+      <div class="stage-top">
+        <div class="mode-toggle">
+          <button id="modeCoord" class="active">Coordinated</button>
+          <button id="modeBase">Stop-and-wait</button>
+        </div>
+        <div class="run-controls">
+          <div class="speed-row">
+            <span>speed</span>
+            <input type="range" id="speed" min="1" max="12" value="5">
+          </div>
+          <button class="btn ghost" id="resetBtn">Reset</button>
+          <button class="btn" id="playBtn">Start</button>
+          <button class="btn primary" id="compareBtn">Run &amp; compare both</button>
+        </div>
+      </div>
+
+      <canvas id="stage" width="880" height="560"></canvas>
+
+      <div class="legend">
+        <div class="legend-item"><span class="swatch" style="background:var(--shelf)"></span>Shelving</div>
+        <div class="legend-item"><span class="swatch" style="background:var(--amber)"></span>Queued task</div>
+        <div class="legend-item"><span class="swatch" style="background:var(--cyan)"></span>Active path</div>
+        <div class="legend-item"><span class="swatch" style="background:var(--danger)"></span>Yielding / conflict</div>
+      </div>
+    </div>
+
+    <div class="side">
+      <div class="card">
+        <div class="section-title">Run metrics <small id="modeLabel">· coordinated</small></div>
+        <div class="metrics-grid">
+          <div class="metric"><div class="label">Ticks elapsed</div><div class="value" id="mTicks">0</div></div>
+          <div class="metric"><div class="label">Tasks done</div><div class="value" id="mTasks">0 / 10</div></div>
+          <div class="metric"><div class="label">Collisions</div><div class="value good" id="mCollisions">0</div></div>
+          <div class="metric"><div class="label">Conflicts resolved</div><div class="value warn" id="mConflicts">0</div></div>
+        </div>
+
+        <div class="compare-banner" id="compareBanner">
+          <div class="big" id="compareBig">—</div>
+          <div class="sub" id="compareSub">Run both modes to compare total completion time.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="section-title">Fleet status</div>
+        <div id="robotList"></div>
+      </div>
+
+      <div class="card">
+        <div class="section-title">Event log</div>
+        <div class="log" id="log"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="note">
+    <b>How the modes differ:</b> <b>Coordinated</b> mirrors the pitched architecture — A* for routing, a priority rule (fewer steps-to-goal wins) plus a one-cell sidestep for local conflict resolution, and nearest-idle-robot bidding for task assignment (a simplified Contract Net). <b>Stop-and-wait</b> keeps the same routing but removes all negotiation: a robot facing an occupied cell just halts, with a last-resort random shuffle after a long stall to avoid a true deadlock. Both modes guarantee zero collisions by construction — the metric that differs is how long the fleet takes to clear the same task list.
+  </div>
+
+</div>
+
+<script>
+(function(){
+  const COLS = 22, ROWS = 14, CELL = 40;
+  const canvas = document.getElementById('stage');
+  const ctx = canvas.getContext('2d');
+  canvas.width = COLS*CELL; canvas.height = ROWS*CELL;
+
+  const ROBOT_COLORS = ['#45C4C0', '#E8A33D', '#E0698A', '#9BCB6E'];
+  const ROBOT_NAMES = ['R1','R2','R3','R4'];
+  const TOTAL_TASKS = 10;
+  const START_POS = [{x:3,y:13},{x:9,y:13},{x:14,y:13},{x:19,y:13}];
+
+  function mulberry32(seed){
+    return function(){
+      seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
+      let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  function buildGrid(){
+    const g = [];
+    for (let y=0;y<ROWS;y++) g.push(new Array(COLS).fill(false));
+    const shelfRows = [[1,1],[3,4],[6,7],[9,10]];
+    const gapCols = [[5,6],[11,12],[17,18]];
+    for (const [r0,r1] of shelfRows){
+      for (let r=r0;r<=r1;r++){
+        for (let x=2;x<=19;x++){
+          const inGap = gapCols.some(([a,b]) => x>=a && x<=b);
+          if (!inGap) g[r][x] = true;
+        }
+      }
+    }
+    return g;
+  }
+  const GRID = buildGrid();
+  const inBounds = (x,y) => x>=0 && x<COLS && y>=0 && y<ROWS && !GRID[y][x];
+
+  function heur(a,b){ return Math.abs(a.x-b.x) + Math.abs(a.y-b.y); }
+
+  function findPath(start, goal){
+    if (start.x===goal.x && start.y===goal.y) return [];
+    const open = [{x:start.x,y:start.y,g:0,f:heur(start,goal),parent:null}];
+    const bestG = new Map([[start.x+'_'+start.y, 0]]);
+    const closed = new Set();
+    while (open.length){
+      let bi = 0;
+      for (let i=1;i<open.length;i++) if (open[i].f < open[bi].f) bi = i;
+      const cur = open.splice(bi,1)[0];
+      const ck = cur.x+'_'+cur.y;
+      if (closed.has(ck)) continue;
+      closed.add(ck);
+      if (cur.x===goal.x && cur.y===goal.y){
+        const path = []; let n = cur;
+        while (n.parent){ path.unshift({x:n.x,y:n.y}); n = n.parent; }
+        return path;
+      }
+      for (const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
+        const nx=cur.x+dx, ny=cur.y+dy;
+        if (!inBounds(nx,ny)) continue;
+        const nk = nx+'_'+ny;
+        if (closed.has(nk)) continue;
+        const ng = cur.g+1;
+        if (bestG.has(nk) && bestG.get(nk) <= ng) continue;
+        bestG.set(nk, ng);
+        open.push({x:nx,y:ny,g:ng,f:ng+heur({x:nx,y:ny},goal),parent:cur});
+      }
+    }
+    return null;
+  }
+
+  function freeCell(rng){
+    let x,y;
+    do { x = 1+Math.floor(rng()*(COLS-2)); y = Math.floor(rng()*ROWS); } while (GRID[y][x]);
+    return {x,y};
+  }
+
+  // ---------- Simulation state ----------
+  let mode = 'coordinated';
+  let running = false;
+  let timer = null;
+  let compareRun = false;
+  let results = { coordinated: null, 'stop-and-wait': null };
+  let logEntries = [];
+
+  let robots, taskQueue, tasksCompleted, ticks, collisions, conflicts;
+
+  function log(msg){
+    logEntries.unshift(`<div><span>t${ticks}</span> ${msg}</div>`);
+    logEntries = logEntries.slice(0, 40);
+    document.getElementById('log').innerHTML = logEntries.join('');
+  }
+
+  function newRun(seedVal){
+    const rng = mulberry32(seedVal);
+    robots = START_POS.map((p,i) => ({
+      id: i, name: ROBOT_NAMES[i], color: ROBOT_COLORS[i],
+      x: p.x, y: p.y, path: [], task: null, battery: 100,
+      status: 'idle', waitTicks: 0, conflictFlash: 0
+    }));
+    taskQueue = [];
+    for (let i=0;i<TOTAL_TASKS;i++) taskQueue.push(freeCell(rng));
+    tasksCompleted = 0; ticks = 0; collisions = 0; conflicts = 0;
+    logEntries = [];
+    document.getElementById('log').innerHTML = '';
+    log('run initialized — ' + TOTAL_TASKS + ' tasks queued');
+    updateHUD();
+    render();
+  }
+
+  function assignTasks(){
+    const idle = robots.filter(r => r.task === null && r.status !== 'done');
+    for (const r of idle){
+      if (!taskQueue.length) continue;
+      let bestIdx = 0, bestCost = Infinity, bestPath = null;
+      for (let i=0;i<taskQueue.length;i++){
+        const p = findPath({x:r.x,y:r.y}, taskQueue[i]);
+        if (p && p.length < bestCost){ bestCost = p.length; bestIdx = i; bestPath = p; }
+      }
+      if (bestPath){
+        const task = taskQueue.splice(bestIdx,1)[0];
+        r.task = task; r.path = bestPath; r.status = 'moving';
+        log(`<b style="color:${r.color}">${r.name}</b> won bid for task at (${task.x},${task.y})`);
+      }
+    }
+  }
+
+  function remainingSteps(r){ return r.path.length; }
+
+  function tickCoordinated(){
+    const movers = robots.filter(r => r.path.length > 0);
+    const priority = [...movers].sort((a,b) => remainingSteps(a) - remainingSteps(b) || a.id - b.id);
+
+    const finalizedDest = new Map(); // key -> robotId
+    const stillHere = new Map(robots.map(r => [r.x+'_'+r.y, r.id]));
+    const decided = new Set();
+
+    // detect swap conflicts first
+    const swapPairs = new Set();
+    for (const r of movers){
+      const nxt = r.path[0];
+      const other = robots.find(o => o.id!==r.id && o.x===nxt.x && o.y===nxt.y && o.path[0] && o.path[0].x===r.x && o.path[0].y===r.y);
+      if (other) { swapPairs.add(r.id); swapPairs.add(other.id); }
+    }
+
+    for (const r of priority){
+      if (decided.has(r.id)) continue;
+      const nxt = r.path[0];
+      const destKey = nxt.x+'_'+nxt.y;
+
+      const vertexConflict = movers.some(o => o.id!==r.id && !decided.has(o.id) && o.path[0] && o.path[0].x===nxt.x && o.path[0].y===nxt.y);
+      const occupiedByStationary = stillHere.has(destKey) && stillHere.get(destKey) !== r.id && !movers.find(o=>o.id===stillHere.get(destKey));
+      const isSwap = swapPairs.has(r.id);
+
+      if (!isSwap && !vertexConflict && !occupiedByStationary && !finalizedDest.has(destKey)){
+        stillHere.delete(r.x+'_'+r.y);
+        r.x = nxt.x; r.y = nxt.y; r.path.shift();
+        r.battery = Math.max(0, r.battery - 0.15);
+        finalizedDest.set(destKey, r.id);
+        stillHere.set(destKey, r.id);
+        decided.add(r.id);
+        r.status = r.path.length ? 'moving' : 'arriving';
+      } else {
+        conflicts++;
+        r.conflictFlash = 6;
+        let moved = false;
+        for (const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
+          const sx = r.x+dx, sy = r.y+dy;
+          const sk = sx+'_'+sy;
+          if (!inBounds(sx,sy)) continue;
+          if (finalizedDest.has(sk)) continue;
+          if (stillHere.has(sk) && stillHere.get(sk)!==r.id) continue;
+          stillHere.delete(r.x+'_'+r.y);
+          r.x = sx; r.y = sy;
+          finalizedDest.set(sk, r.id); stillHere.set(sk, r.id);
+          moved = true; break;
+        }
+        decided.add(r.id);
+        if (moved){
+          r.status = 'detour';
+          r.path = findPath({x:r.x,y:r.y}, r.task) || r.path;
+          log(`<b style="color:${r.color}">${r.name}</b> sidestepped to clear a conflict`);
+        } else {
+          r.status = 'yielding';
+          r.waitTicks++;
+        }
+      }
+    }
+    finishArrivals();
+  }
+
+  function tickBaseline(){
+    const occupied = new Map(robots.map(r => [r.x+'_'+r.y, r.id]));
+    for (const r of robots){
+      if (!r.path.length) continue;
+      const nxt = r.path[0];
+      const destKey = nxt.x+'_'+nxt.y;
+      const swap = robots.find(o => o.id!==r.id && o.x===nxt.x && o.y===nxt.y && o.path[0] && o.path[0].x===r.x && o.path[0].y===r.y);
+      const blocked = (occupied.has(destKey) && occupied.get(destKey) !== r.id) || swap;
+
+      if (!blocked){
+        occupied.delete(r.x+'_'+r.y);
+        r.x = nxt.x; r.y = nxt.y; r.path.shift();
+        r.battery = Math.max(0, r.battery - 0.15);
+        occupied.set(destKey, r.id);
+        r.status = r.path.length ? 'moving' : 'arriving';
+        r.waitTicks = 0;
+      } else {
+        r.status = 'yielding';
+        r.waitTicks++;
+        conflicts++;
+        if (r.waitTicks > 22){
+          const opts = [[1,0],[-1,0],[0,1],[0,-1]].map(([dx,dy])=>({x:r.x+dx,y:r.y+dy}))
+            .filter(p => inBounds(p.x,p.y) && !occupied.has(p.x+'_'+p.y));
+          if (opts.length){
+            const pick = opts[Math.floor(Math.random()*opts.length)];
+            occupied.delete(r.x+'_'+r.y);
+            r.x = pick.x; r.y = pick.y;
+            occupied.set(pick.x+'_'+pick.y, r.id);
+            r.path = findPath({x:r.x,y:r.y}, r.task) || r.path;
+            r.status = 'detour';
+            r.waitTicks = 0;
+            log(`<b style="color:${r.color}">${r.name}</b> forced a recovery shuffle after a long stall`);
+          }
+        }
+      }
+    }
+    finishArrivals();
+  }
+
+  function finishArrivals(){
+    for (const r of robots){
+      if (r.task && r.path.length===0 && (r.x===r.task.x && r.y===r.task.y)){
+        tasksCompleted++;
+        log(`<b style="color:${r.color}">${r.name}</b> completed task ${tasksCompleted}/${TOTAL_TASKS}`);
+        r.task = null; r.status = 'idle';
+      }
+    }
+  }
+
+  function step(){
+    ticks++;
+    assignTasks();
+    if (mode === 'coordinated') tickCoordinated(); else tickBaseline();
+    updateHUD();
+    render();
+
+    if (tasksCompleted >= TOTAL_TASKS && !taskQueue.length){
+      pause();
+      results[mode] = ticks;
+      log(`<b>run complete</b> — all ${TOTAL_TASKS} tasks done in ${ticks} ticks`);
+      showComparison();
+      if (compareRun && mode === 'coordinated'){
+        compareRun = 'switch';
+        setTimeout(() => {
+          setMode('stop-and-wait', 42);
+          start();
+        }, 500);
+      } else {
+        compareRun = false;
+      }
+    }
+  }
+
+  function updateHUD(){
+    document.getElementById('mTicks').textContent = ticks;
+    document.getElementById('mTasks').textContent = tasksCompleted + ' / ' + TOTAL_TASKS;
+    document.getElementById('mCollisions').textContent = collisions;
+    document.getElementById('mConflicts').textContent = conflicts;
+    document.getElementById('modeLabel').textContent = '· ' + (mode==='coordinated' ? 'coordinated' : 'stop-and-wait');
+
+    const list = document.getElementById('robotList');
+    list.innerHTML = robots.map(r => `
+      <div class="robot-row">
+        <span class="dot" style="background:${r.color}"></span>
+        <div class="robot-info">
+          <div class="name">${r.name}</div>
+          <div class="status">${r.status}${r.task ? ' → ('+r.task.x+','+r.task.y+')' : ''}</div>
+        </div>
+        <div class="batt">${r.battery.toFixed(0)}%</div>
+      </div>
+    `).join('');
+  }
+
+  function showComparison(){
+    const c = results['coordinated'], b = results['stop-and-wait'];
+    const banner = document.getElementById('compareBanner');
+    if (c && b){
+      const pct = Math.round(((b - c) / b) * 100);
+      document.getElementById('compareBig').textContent = (pct>=0?'+':'') + pct + '% faster';
+      document.getElementById('compareSub').textContent =
+        `Coordinated: ${c} ticks · Stop-and-wait: ${b} ticks, to clear the same ${TOTAL_TASKS} tasks.`;
+      banner.classList.add('show');
+    } else if (c || b){
+      const which = c ? 'Coordinated' : 'Stop-and-wait';
+      const val = c || b;
+      document.getElementById('compareBig').textContent = val + ' ticks';
+      document.getElementById('compareSub').textContent = `${which} finished. Run the other mode to compare.`;
+      banner.classList.add('show');
+    }
+  }
+
+  // ---------- Rendering ----------
+  function render(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle = '#101826';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+
+    ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+    ctx.lineWidth = 1;
+    for (let x=0;x<=COLS;x++){ ctx.beginPath(); ctx.moveTo(x*CELL,0); ctx.lineTo(x*CELL,ROWS*CELL); ctx.stroke(); }
+    for (let y=0;y<=ROWS;y++){ ctx.beginPath(); ctx.moveTo(0,y*CELL); ctx.lineTo(COLS*CELL,y*CELL); ctx.stroke(); }
+
+    for (let y=0;y<ROWS;y++) for (let x=0;x<COLS;x++){
+      if (GRID[y][x]){
+        ctx.fillStyle = '#24344E';
+        ctx.fillRect(x*CELL+1, y*CELL+1, CELL-2, CELL-2);
+        ctx.strokeStyle = '#35486A';
+        ctx.beginPath();
+        for (let i=6;i<CELL-4;i+=8){
+          ctx.moveTo(x*CELL+2, y*CELL+i); ctx.lineTo(x*CELL+CELL-2, y*CELL+i);
+        }
+        ctx.stroke();
+      }
+    }
+
+    // queued tasks
+    for (const t of taskQueue){
+      ctx.fillStyle = '#E8A33D';
+      const cx = t.x*CELL+CELL/2, cy = t.y*CELL+CELL/2, s = 7;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy-s); ctx.lineTo(cx+s, cy); ctx.lineTo(cx, cy+s); ctx.lineTo(cx-s, cy);
+      ctx.closePath(); ctx.fill();
+    }
+
+    // robot paths
+    for (const r of robots){
+      if (!r.path.length) continue;
+      ctx.strokeStyle = r.color + '55';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([3,4]);
+      ctx.beginPath();
+      ctx.moveTo(r.x*CELL+CELL/2, r.y*CELL+CELL/2);
+      for (const p of r.path) ctx.lineTo(p.x*CELL+CELL/2, p.y*CELL+CELL/2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // robots
+    for (const r of robots){
+      const cx = r.x*CELL+CELL/2, cy = r.y*CELL+CELL/2;
+      if (r.conflictFlash > 0){
+        ctx.strokeStyle = '#E0566A';
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(cx,cy,15,0,Math.PI*2); ctx.stroke();
+        r.conflictFlash--;
+      }
+      ctx.fillStyle = r.color;
+      ctx.beginPath(); ctx.arc(cx,cy,12,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#0D1420';
+      ctx.font = '600 11px IBM Plex Mono, monospace';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(r.name, cx, cy+1);
+    }
+  }
+
+  // ---------- Controls ----------
+  function pause(){
+    running = false;
+    clearInterval(timer);
+    document.getElementById('playBtn').textContent = 'Start';
+  }
+  function start(){
+    running = true;
+    document.getElementById('playBtn').textContent = 'Pause';
+    const speed = document.getElementById('speed').value;
+    clearInterval(timer);
+    timer = setInterval(step, 1000 / speed);
+  }
+
+  function setMode(m, seedVal){
+    mode = m;
+    document.getElementById('modeCoord').classList.toggle('active', m==='coordinated');
+    document.getElementById('modeBase').classList.toggle('active', m==='stop-and-wait');
+    newRun(seedVal !== undefined ? seedVal : 42);
+  }
+
+  document.getElementById('modeCoord').onclick = () => { pause(); setMode('coordinated'); document.getElementById('compareBanner').classList.remove('show'); results={coordinated:null,'stop-and-wait':null}; };
+  document.getElementById('modeBase').onclick = () => { pause(); setMode('stop-and-wait'); document.getElementById('compareBanner').classList.remove('show'); results={coordinated:null,'stop-and-wait':null}; };
+
+  document.getElementById('playBtn').onclick = () => { running ? pause() : start(); };
+  document.getElementById('resetBtn').onclick = () => { pause(); compareRun=false; results={coordinated:null,'stop-and-wait':null}; document.getElementById('compareBanner').classList.remove('show'); newRun(42); };
+  document.getElementById('speed').oninput = () => { if (running) start(); };
+
+  document.getElementById('compareBtn').onclick = () => {
+    pause();
+    results = { coordinated: null, 'stop-and-wait': null };
+    document.getElementById('compareBanner').classList.remove('show');
+    compareRun = true;
+    document.getElementById('speed').value = 12;
+    setMode('coordinated', 42);
+    start();
+  };
+
+  setMode('coordinated', 42);
+})();
+</script>
+</body>
+</html>

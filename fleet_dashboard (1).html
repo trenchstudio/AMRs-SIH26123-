@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Fleet Dashboard — AMR Coordination</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+  :root{
+    --bg:#0B0F0E;
+    --panel:#12191A;
+    --panel-2:#0F1516;
+    --line:#213331;
+    --text:#E7EFEC;
+    --muted:#7E9591;
+    --green:#3ED9A0;
+    --amber:#F2B84B;
+    --red:#F2584B;
+    --blue:#5EB8E0;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:radial-gradient(circle at 15% 0%, #0F1917 0%, var(--bg) 55%);
+    color:var(--text);
+    font-family:'Space Grotesk', sans-serif;
+    padding:28px;
+    min-height:100vh;
+  }
+  .wrap{max-width:1180px; margin:0 auto;}
+
+  /* Header */
+  header{
+    display:flex; justify-content:space-between; align-items:flex-end;
+    padding-bottom:18px; margin-bottom:22px; border-bottom:1px solid var(--line);
+  }
+  .brand{display:flex; align-items:center; gap:12px;}
+  .brand-mark{
+    width:38px; height:38px; border-radius:8px;
+    background:conic-gradient(from 220deg, var(--green), var(--blue), var(--green));
+    display:flex; align-items:center; justify-content:center;
+    font-weight:700; color:#04120E; font-size:15px;
+  }
+  h1{font-size:19px; font-weight:600; letter-spacing:.2px;}
+  .sub{color:var(--muted); font-size:12.5px; margin-top:2px; font-family:'IBM Plex Mono', monospace;}
+  .fleet-stats{display:flex; gap:26px;}
+  .stat{text-align:right;}
+  .stat .num{font-family:'IBM Plex Mono', monospace; font-size:20px; font-weight:600;}
+  .stat .lbl{color:var(--muted); font-size:11px; margin-top:2px;}
+  .stat.ok .num{color:var(--green);}
+  .stat.warn .num{color:var(--amber);}
+
+  /* Layout */
+  .grid{display:grid; grid-template-columns:1.55fr 1fr; gap:18px;}
+  .panel{
+    background:linear-gradient(180deg, var(--panel), var(--panel-2));
+    border:1px solid var(--line); border-radius:10px; padding:18px;
+  }
+  .panel h2{font-size:13px; font-weight:600; color:var(--text); margin-bottom:2px;}
+  .panel .panel-sub{font-size:11px; color:var(--muted); margin-bottom:14px; font-family:'IBM Plex Mono', monospace;}
+
+  /* Warehouse map */
+  .map-box{position:relative; height:420px;}
+  svg{width:100%; height:100%;}
+  .aisle-label{font-family:'IBM Plex Mono', monospace; font-size:9px; fill:var(--muted);}
+  .path{stroke-dasharray:4 4; fill:none; stroke-width:1.4;}
+  .robot-label{font-family:'IBM Plex Mono', monospace; font-size:9px; fill:var(--text);}
+  .pulse{animation:pulse 1.8s ease-in-out infinite;}
+  @keyframes pulse{
+    0%,100%{opacity:1;}
+    50%{opacity:.45;}
+  }
+  .conflict-ring{animation:ring 1.2s ease-out infinite;}
+  @keyframes ring{
+    0%{r:9; opacity:.9;}
+    100%{r:20; opacity:0;}
+  }
+
+  .legend{display:flex; gap:18px; margin-top:12px; flex-wrap:wrap;}
+  .legend-item{display:flex; align-items:center; gap:6px; font-size:11px; color:var(--muted); font-family:'IBM Plex Mono', monospace;}
+  .dot{width:8px; height:8px; border-radius:50%; display:inline-block;}
+
+  /* Robot cards */
+  .robot-list{display:flex; flex-direction:column; gap:10px;}
+  .robot-card{
+    border:1px solid var(--line); border-radius:8px; padding:12px 14px;
+    display:grid; grid-template-columns:auto 1fr auto; gap:14px; align-items:center;
+    background:#0E1415;
+  }
+  .robot-card.blocked{border-color:rgba(242,88,75,.5); background:rgba(242,88,75,.06);}
+  .r-id{
+    width:34px; height:34px; border-radius:7px; display:flex; align-items:center; justify-content:center;
+    font-family:'IBM Plex Mono', monospace; font-weight:600; font-size:12px;
+  }
+  .r-id.rob-a{background:rgba(62,217,160,.15); color:var(--green); border:1px solid rgba(62,217,160,.35);}
+  .r-id.rob-b{background:rgba(94,184,224,.15); color:var(--blue); border:1px solid rgba(94,184,224,.35);}
+  .r-id.rob-c{background:rgba(242,88,75,.15); color:var(--red); border:1px solid rgba(242,88,75,.35);}
+  .r-name{font-size:13px; font-weight:600;}
+  .r-meta{font-size:11px; color:var(--muted); font-family:'IBM Plex Mono', monospace; margin-top:2px;}
+  .r-status{font-size:10.5px; padding:3px 8px; border-radius:20px; font-family:'IBM Plex Mono', monospace; white-space:nowrap;}
+  .st-moving{background:rgba(62,217,160,.15); color:var(--green);}
+  .st-rerouting{background:rgba(242,184,75,.15); color:var(--amber);}
+  .st-blocked{background:rgba(242,88,75,.15); color:var(--red);}
+  .battery{display:flex; align-items:center; gap:6px; margin-top:6px;}
+  .batt-track{width:70px; height:5px; border-radius:3px; background:#1D2827; overflow:hidden;}
+  .batt-fill{height:100%; border-radius:3px;}
+  .batt-num{font-family:'IBM Plex Mono', monospace; font-size:10.5px; color:var(--muted);}
+
+  /* Event log */
+  .log{margin-top:18px;}
+  .log-item{
+    display:grid; grid-template-columns:70px auto 1fr; gap:10px; align-items:baseline;
+    padding:8px 0; border-bottom:1px solid var(--line); font-size:12px;
+  }
+  .log-item:last-child{border-bottom:none;}
+  .log-time{color:var(--muted); font-family:'IBM Plex Mono', monospace; font-size:10.5px;}
+  .tag{font-size:9.5px; padding:2px 7px; border-radius:4px; font-family:'IBM Plex Mono', monospace; width:fit-content;}
+  .tag-info{background:rgba(94,184,224,.15); color:var(--blue);}
+  .tag-warn{background:rgba(242,184,75,.15); color:var(--amber);}
+  .tag-crit{background:rgba(242,88,75,.15); color:var(--red);}
+
+  footer{
+    margin-top:22px; padding-top:14px; border-top:1px solid var(--line);
+    display:flex; justify-content:space-between; color:var(--muted); font-size:11px; font-family:'IBM Plex Mono', monospace;
+  }
+
+  /* Pose & transform panel */
+  .heading-line{stroke-width:2; stroke-linecap:round;}
+  .pose-panel{margin-top:18px;}
+  .pose-tabs{display:flex; gap:8px; margin-bottom:14px;}
+  .pose-tab{
+    flex:1; padding:8px 0; text-align:center; border-radius:6px; border:1px solid var(--line);
+    font-family:'IBM Plex Mono', monospace; font-size:12px; color:var(--muted);
+    background:#0E1415; cursor:pointer; transition:border-color .15s, color .15s;
+  }
+  .pose-tab.active{color:var(--text); border-color:currentColor;}
+  .pose-tab[data-id="A"].active{color:var(--green);}
+  .pose-tab[data-id="B"].active{color:var(--blue);}
+  .pose-tab[data-id="C"].active{color:var(--red);}
+
+  .pose-body{display:none; grid-template-columns:1fr 1fr; gap:18px;}
+  .pose-body.active{display:grid;}
+
+  .pose-field{margin-bottom:10px;}
+  .pose-field .k{font-size:10.5px; color:var(--muted); font-family:'IBM Plex Mono', monospace;}
+  .pose-field .v{font-size:13px; margin-top:2px;}
+  .pose-formula{
+    font-family:'IBM Plex Mono', monospace; font-size:12px; color:var(--amber);
+    background:rgba(242,184,75,.08); border:1px solid rgba(242,184,75,.25);
+    padding:6px 10px; border-radius:6px; margin-top:4px; width:fit-content;
+  }
+
+  .matrix{
+    font-family:'IBM Plex Mono', monospace; font-size:11.5px;
+    border:1px solid var(--line); border-radius:8px; padding:12px; background:#0E1415;
+  }
+  .matrix .row{display:grid; grid-template-columns:repeat(4, 1fr); gap:6px; padding:3px 0;}
+  .matrix .row span{text-align:right;}
+  .matrix .mlabel{font-size:10px; color:var(--muted); margin-bottom:8px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="brand">
+      <div class="brand-mark">AMR</div>
+      <div>
+        <h1>Fleet Dashboard</h1>
+        <div class="sub">peer-to-peer mesh · edge nodes: 3 online · zone WH-B</div>
+      </div>
+    </div>
+    <div class="fleet-stats">
+      <div class="stat ok"><div class="num">3/3</div><div class="lbl">robots online</div></div>
+      <div class="stat warn"><div class="num">1</div><div class="lbl">active reroute</div></div>
+      <div class="stat ok"><div class="num">0</div><div class="lbl">collisions today</div></div>
+    </div>
+  </header>
+
+  <div class="grid">
+
+    <!-- LEFT: live warehouse map -->
+    <div class="panel">
+      <h2>Warehouse map — live positions</h2>
+      <div class="panel-sub">grid 12×8 · updated via local broadcast, no central server</div>
+      <div class="map-box">
+        <svg viewBox="0 0 560 400">
+          <!-- aisle grid -->
+          <g stroke="#1B2726" stroke-width="1">
+            <line x1="40" y1="20" x2="40" y2="380"/>
+            <line x1="140" y1="20" x2="140" y2="380"/>
+            <line x1="240" y1="20" x2="240" y2="380"/>
+            <line x1="340" y1="20" x2="340" y2="380"/>
+            <line x1="440" y1="20" x2="440" y2="380"/>
+            <line x1="520" y1="20" x2="520" y2="380"/>
+            <line x1="20" y1="60" x2="540" y2="60"/>
+            <line x1="20" y1="160" x2="540" y2="160"/>
+            <line x1="20" y1="260" x2="540" y2="260"/>
+            <line x1="20" y1="340" x2="540" y2="340"/>
+          </g>
+          <!-- shelf blocks -->
+          <g fill="#182322">
+            <rect x="55" y="75" width="70" height="70" rx="3"/>
+            <rect x="155" y="75" width="70" height="70" rx="3"/>
+            <rect x="255" y="75" width="70" height="70" rx="3"/>
+            <rect x="355" y="75" width="70" height="70" rx="3"/>
+            <rect x="55" y="175" width="70" height="70" rx="3"/>
+            <rect x="155" y="175" width="70" height="70" rx="3"/>
+            <rect x="355" y="175" width="70" height="70" rx="3"/>
+            <rect x="55" y="275" width="70" height="50" rx="3"/>
+            <rect x="255" y="275" width="70" height="50" rx="3"/>
+            <rect x="355" y="275" width="70" height="50" rx="3"/>
+          </g>
+          <text x="60" y="45" class="aisle-label">AISLE 1</text>
+          <text x="260" y="45" class="aisle-label">AISLE 3</text>
+          <text x="450" y="45" class="aisle-label">DOCK</text>
+
+          <!-- planned paths -->
+          <path class="path" d="M75,110 L75,225 L255,225" stroke="#3ED9A0" opacity="0.55"/>
+          <path class="path" d="M480,90 L480,300 L340,300" stroke="#5EB8E0" opacity="0.55"/>
+          <path class="path" d="M270,110 L270,225" stroke="#F2584B" opacity="0.7"/>
+
+          <!-- Robot A - moving, heading yaw≈42° -->
+          <line class="heading-line" x1="75" y1="225" x2="93" y2="212" stroke="#3ED9A0"/>
+          <circle cx="75" cy="225" r="9" fill="#3ED9A0" class="pulse"/>
+          <text x="88" y="248" class="robot-label">R-A · 74% · yaw 42°</text>
+
+          <!-- Robot B - rerouting, heading yaw≈95° -->
+          <line class="heading-line" x1="480" y1="230" x2="478" y2="211" stroke="#5EB8E0"/>
+          <circle cx="480" cy="230" r="9" fill="#5EB8E0" class="pulse"/>
+          <text x="493" y="253" class="robot-label">R-B · 61% · yaw 95°</text>
+
+          <!-- Robot C - blocked / conflict at choke point, heading yaw≈180° -->
+          <line class="heading-line" x1="270" y1="225" x2="252" y2="226" stroke="#F2584B"/>
+          <circle cx="270" cy="225" r="9" fill="#F2584B" class="pulse"/>
+          <circle cx="270" cy="225" r="9" fill="none" stroke="#F2584B" stroke-width="1.5" class="conflict-ring"/>
+          <text x="283" y="248" class="robot-label">R-C · 38% · blocked · yaw 180°</text>
+
+          <!-- choke point marker -->
+          <rect x="235" y="205" width="70" height="40" fill="none" stroke="#F2B84B" stroke-width="1" stroke-dasharray="3 3"/>
+          <text x="240" y="200" class="aisle-label" fill="#F2B84B">CHOKE POINT — resolving</text>
+        </svg>
+      </div>
+      <div class="legend">
+        <div class="legend-item"><span class="dot" style="background:#3ED9A0"></span>moving</div>
+        <div class="legend-item"><span class="dot" style="background:#5EB8E0"></span>rerouting</div>
+        <div class="legend-item"><span class="dot" style="background:#F2584B"></span>blocked / conflict</div>
+        <div class="legend-item"><span class="dot" style="background:#F2B84B"></span>contested intersection</div>
+      </div>
+    </div>
+
+    <!-- RIGHT: robot cards + log -->
+    <div>
+      <div class="panel">
+        <h2>Robots</h2>
+        <div class="panel-sub">position, battery, intent — broadcast peer-to-peer</div>
+        <div class="robot-list">
+
+          <div class="robot-card">
+            <div class="r-id rob-a">R-A</div>
+            <div>
+              <div class="r-name">Robot A</div>
+              <div class="r-meta">pos (1.20, 4.60, 0) → aisle 3 pickup</div>
+              <div class="r-meta">Fixed · ZYX · roll 15° pitch -8° yaw 42°</div>
+              <div class="battery">
+                <div class="batt-track"><div class="batt-fill" style="width:74%; background:#3ED9A0;"></div></div>
+                <span class="batt-num">74%</span>
+              </div>
+            </div>
+            <div class="r-status st-moving">moving</div>
+          </div>
+
+          <div class="robot-card">
+            <div class="r-id rob-b">R-B</div>
+            <div>
+              <div class="r-name">Robot B</div>
+              <div class="r-meta">pos (9.60, 4.60, 0) → dock 2</div>
+              <div class="r-meta">Euler · WVU · U 6° V -3° W 95°</div>
+              <div class="battery">
+                <div class="batt-track"><div class="batt-fill" style="width:61%; background:#F2B84B;"></div></div>
+                <span class="batt-num">61%</span>
+              </div>
+            </div>
+            <div class="r-status st-rerouting">rerouting</div>
+          </div>
+
+          <div class="robot-card blocked">
+            <div class="r-id rob-c">R-C</div>
+            <div>
+              <div class="r-name">Robot C</div>
+              <div class="r-meta">pos (5.40, 4.50, 0) → aisle 1 return</div>
+              <div class="r-meta">Fixed · ZYX · roll -2° pitch 1° yaw 180°</div>
+              <div class="battery">
+                <div class="batt-track"><div class="batt-fill" style="width:38%; background:#F2584B;"></div></div>
+                <span class="batt-num">38% · low</span>
+              </div>
+            </div>
+            <div class="r-status st-blocked">yielding</div>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="panel log">
+        <h2>Event log</h2>
+        <div class="panel-sub">consensus &amp; conflict resolution trail</div>
+
+        <div class="log-item">
+          <span class="log-time">20:35:12</span>
+          <span class="tag tag-crit">conflict</span>
+          <span>R-C and R-B claim same choke point — priority given to R-B (lower battery margin, tighter deadline).</span>
+        </div>
+        <div class="log-item">
+          <span class="log-time">20:35:12</span>
+          <span class="tag tag-warn">reroute</span>
+          <span>R-C yielding, recalculating path via aisle 2 bypass.</span>
+        </div>
+        <div class="log-item">
+          <span class="log-time">20:34:48</span>
+          <span class="tag tag-info">broadcast</span>
+          <span>R-A shared updated intent vector to local peers, no ack required.</span>
+        </div>
+        <div class="log-item">
+          <span class="log-time">20:33:02</span>
+          <span class="tag tag-info">task</span>
+          <span>R-B assigned pickup at dock 2, ETA recalculated after reroute.</span>
+        </div>
+      </div>
+
+      <div class="panel pose-panel">
+        <h2>Pose &amp; transform</h2>
+        <div class="panel-sub">homogeneous transform T = R(method, order) + translation, per robot</div>
+
+        <div class="pose-tabs">
+          <div class="pose-tab active" data-id="A">R-A</div>
+          <div class="pose-tab" data-id="B">R-B</div>
+          <div class="pose-tab" data-id="C">R-C</div>
+        </div>
+
+        <!-- Robot A -->
+        <div class="pose-body active" id="pose-A">
+          <div>
+            <div class="pose-field"><div class="k">METHOD_OF_ROTATION</div><div class="v">'F' — Fixed angle</div></div>
+            <div class="pose-field"><div class="k">ORDER_ROTATION</div><div class="v">'ZYX'</div></div>
+            <div class="pose-field"><div class="k">ROLL, PITCH, YAW (Rx, Ry, Rz)</div><div class="v">15°, -8°, 42°</div></div>
+            <div class="pose-field"><div class="k">TRANSLATION [dx dy dz]</div><div class="v">[1.20  4.60  0.00]</div></div>
+            <div class="pose-formula">R = Rz · Ry · Rx</div>
+          </div>
+          <div class="matrix">
+            <div class="mlabel">T (4×4)</div>
+            <div class="row"><span>0.736</span><span>-0.673</span><span>0.073</span><span>1.200</span></div>
+            <div class="row"><span>0.663</span><span>0.694</span><span>-0.282</span><span>4.600</span></div>
+            <div class="row"><span>0.139</span><span>0.256</span><span>0.957</span><span>0.000</span></div>
+            <div class="row"><span>0</span><span>0</span><span>0</span><span>1</span></div>
+          </div>
+        </div>
+
+        <!-- Robot B -->
+        <div class="pose-body" id="pose-B">
+          <div>
+            <div class="pose-field"><div class="k">METHOD_OF_ROTATION</div><div class="v">'E' — Euler angle</div></div>
+            <div class="pose-field"><div class="k">ORDER_ROTATION</div><div class="v">'WVU'</div></div>
+            <div class="pose-field"><div class="k">U, V, W</div><div class="v">6°, -3°, 95°</div></div>
+            <div class="pose-field"><div class="k">TRANSLATION [dx dy dz]</div><div class="v">[9.60  4.60  0.00]</div></div>
+            <div class="pose-formula">R = Rz · Ry · Rx</div>
+          </div>
+          <div class="matrix">
+            <div class="mlabel">T (4×4)</div>
+            <div class="row"><span>-0.087</span><span>-0.990</span><span>0.109</span><span>9.600</span></div>
+            <div class="row"><span>0.995</span><span>-0.092</span><span>-0.043</span><span>4.600</span></div>
+            <div class="row"><span>0.052</span><span>0.104</span><span>0.993</span><span>0.000</span></div>
+            <div class="row"><span>0</span><span>0</span><span>0</span><span>1</span></div>
+          </div>
+        </div>
+
+        <!-- Robot C -->
+        <div class="pose-body" id="pose-C">
+          <div>
+            <div class="pose-field"><div class="k">METHOD_OF_ROTATION</div><div class="v">'F' — Fixed angle</div></div>
+            <div class="pose-field"><div class="k">ORDER_ROTATION</div><div class="v">'ZYX'</div></div>
+            <div class="pose-field"><div class="k">ROLL, PITCH, YAW (Rx, Ry, Rz)</div><div class="v">-2°, 1°, 180°</div></div>
+            <div class="pose-field"><div class="k">TRANSLATION [dx dy dz]</div><div class="v">[5.40  4.50  0.00]</div></div>
+            <div class="pose-formula">R = Rz · Ry · Rx</div>
+          </div>
+          <div class="matrix">
+            <div class="mlabel">T (4×4)</div>
+            <div class="row"><span>-1.000</span><span>0.001</span><span>-0.017</span><span>5.400</span></div>
+            <div class="row"><span>0.000</span><span>-0.999</span><span>-0.035</span><span>4.500</span></div>
+            <div class="row"><span>-0.017</span><span>-0.035</span><span>0.999</span><span>0.000</span></div>
+            <div class="row"><span>0</span><span>0</span><span>0</span><span>1</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <span>edge nodes · Raspberry Pi / Jetson Nano onboard each robot</span>
+    <span>zero central server · last sync 240ms ago</span>
+  </footer>
+
+</div>
+<script>
+  document.querySelectorAll('.pose-tab').forEach(function(tab){
+    tab.addEventListener('click', function(){
+      var id = tab.getAttribute('data-id');
+      document.querySelectorAll('.pose-tab').forEach(function(t){ t.classList.remove('active'); });
+      document.querySelectorAll('.pose-body').forEach(function(b){ b.classList.remove('active'); });
+      tab.classList.add('active');
+      document.getElementById('pose-' + id).classList.add('active');
+    });
+  });
+</script>
+</body>
+</html>

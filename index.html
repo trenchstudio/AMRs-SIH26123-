@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenAMR - Multi-Section Robot Workspace</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #f3f0f7; color: #1e1b26; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        .sidebar-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 1rem; font-size: 0.875rem; font-weight: 500; color: #4a4556; border-radius: 0.375rem; cursor: pointer; transition: all 0.15s; }
+        .sidebar-item:hover, .sidebar-item.active { background-color: #ffffff; color: #7c3aed; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .panel-card { background: #fbfafd; border: 1px solid #e9e3f0; border-radius: 0.75rem; padding: 1.25rem; }
+        .purple-btn { background-color: #f3e8ff; color: #7c3aed; border: 1px solid #d8b4fe; border-radius: 0.5rem; font-weight: 600; padding: 0.5rem 1rem; cursor: pointer; transition: background-color 0.2s; }
+        .purple-btn:hover { background-color: #e9d5ff; }
+        .purple-btn-outline { border: 1px solid #c084fc; color: #7c3aed; border-radius: 0.5rem; font-weight: 600; padding: 0.5rem 1rem; }
+        .purple-btn-outline:hover { background-color: #faf5ff; }
+        .red-btn-outline { border: 1px solid #f87171; color: #dc2626; border-radius: 0.5rem; font-weight: 600; padding: 0.5rem 1rem; }
+        .red-btn-outline:hover { background-color: #fef2f2; }
+        .bg-purple-accent { background-color: #7c3aed; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+    </style>
+</head>
+<body class="h-screen flex overflow-hidden">
+
+    <!-- Left Navigation Sidebar -->
+    <aside class="w-56 bg-[#f3f0f7] border-r border-[#e4dee9] flex flex-col justify-between p-4 flex-shrink-0">
+        <div class="space-y-4">
+            <!-- App Branding -->
+            <div class="flex items-center space-x-2 px-2">
+                <div class="w-7 h-7 bg-purple-accent rounded-lg flex items-center justify-center text-white font-bold text-xs">AMR</div>
+                <div>
+                    <h1 class="text-sm font-bold text-gray-900 leading-none">OpenAMR</h1>
+                    <span class="text-[10px] text-gray-500 font-medium">ROBOT WORKSPACE</span>
+                </div>
+            </div>
+
+            <!-- Navigation Links -->
+            <nav class="space-y-1">
+                <div class="sidebar-item active" id="nav-console" onclick="switchTab('console')">💻 Console</div>
+                <div class="sidebar-item" id="nav-routes" onclick="switchTab('routes')">🛣️ Routes</div>
+                <div class="sidebar-item" id="nav-maps" onclick="switchTab('maps')">🗺️ Maps</div>
+                <div class="sidebar-item" id="nav-programs" onclick="switchTab('programs')">⚙️ Programs & Voice</div>
+            </nav>
+        </div>
+
+        <!-- Sidebar Footer -->
+        <div class="space-y-2 pt-4 border-t border-purple-200">
+            <div class="flex items-center justify-between text-xs bg-white px-3 py-1.5 rounded-full border border-gray-200">
+                <span class="flex items-center gap-1.5 text-emerald-600 font-semibold"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Connected</span>
+                <span class="text-gray-400">EN</span>
+            </div>
+            <div class="text-[10px] text-gray-400 text-center font-mono">127.0.0.1:9090</div>
+        </div>
+    </aside>
+
+    <!-- Main Content Workspace -->
+    <main class="flex-1 flex flex-col bg-[#f8f6fb] overflow-y-auto">
+        
+        <!-- Top Navigation Header -->
+        <header class="h-12 bg-[#f3f0f7] border-b border-[#e4dee9] px-6 flex items-center justify-between">
+            <div class="flex items-center space-x-4 text-xs font-medium">
+                <div class="flex items-center space-x-1.5 text-emerald-600">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Connected
+                </div>
+                <div class="text-gray-600">BATT <span class="font-bold text-gray-800">63%</span></div>
+            </div>
+            <button class="bg-red-600 text-white font-bold text-xs px-4 py-1.5 rounded-md hover:bg-red-700">E-STOP</button>
+        </header>
+
+        <!-- DEMO Banner -->
+        <div class="bg-purple-100/70 border-b border-purple-200 px-6 py-2 flex justify-between items-center text-xs text-purple-900">
+            <span>• <strong>DEMO MODE</strong> – every value on screen is simulated. No robot is connected.</span>
+            <button class="bg-white border border-purple-300 text-purple-700 px-3 py-0.5 rounded text-[11px] font-semibold hover:bg-purple-50">Exit demo mode</button>
+        </div>
+
+        <div class="p-6 flex-1">
+            
+            <!-- SECTION 1: CONSOLE VIEW -->
+            <div id="view-console" class="tab-content active space-y-4">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-900">Console</h2>
+                    <p class="text-xs text-gray-500">Live ROS logs and raw topic inspection</p>
+                </div>
+
+                <div class="grid grid-cols-12 gap-4">
+                    <!-- ROSOUT Stream -->
+                    <div class="col-span-6 panel-card flex flex-col h-[600px]">
+                        <div class="flex items-center justify-between pb-3 border-b border-purple-100">
+                            <div class="flex items-center space-x-2">
+                                <span class="text-xs font-bold text-purple-700 uppercase bg-purple-100 px-2 py-1 rounded">/rosout</span>
+                                <select class="text-xs border rounded px-1.5 py-0.5"><option>Info+</option></select>
+                                <input type="text" placeholder="node..." class="text-xs border rounded px-2 py-0.5 w-24">
+                            </div>
+                            <div class="flex items-center space-x-1">
+                                <button class="text-xs px-2 py-0.5 border rounded bg-white">Pause</button>
+                                <button class="text-xs px-2 py-0.5 border rounded bg-white">Clear</button>
+                            </div>
+                        </div>
+                        <div id="rosout-log" class="flex-1 font-mono text-[11px] space-y-2 overflow-y-auto pt-3 text-gray-700">
+                            <div><span class="text-gray-400">21:14:40</span> <span class="text-emerald-600 font-bold">INFO</span> <span class="text-purple-600">[rosbridge]</span> Subscribed to /rosout</div>
+                            <div><span class="text-gray-400">21:14:55</span> <span class="text-emerald-600 font-bold">INFO</span> <span class="text-purple-600">[rosbridge]</span> Subscribed to /scan</div>
+                        </div>
+                    </div>
+
+                    <!-- Topic Echo -->
+                    <div class="col-span-6 panel-card flex flex-col h-[600px]">
+                        <div class="flex items-center justify-between pb-3 border-b border-purple-100">
+                            <div class="flex items-center space-x-2 flex-1 mr-2">
+                                <span class="text-xs font-bold text-purple-700 uppercase">TOPIC ECHO</span>
+                                <input type="text" value="/scan" class="text-xs border-2 border-purple-400 rounded-full px-3 py-1 w-full font-mono">
+                            </div>
+                            <button class="text-xs border border-red-400 text-red-600 font-bold px-3 py-1 rounded-md bg-white">Stop</button>
+                        </div>
+                        <pre id="topic-echo" class="flex-1 font-mono text-[11px] bg-white p-3 rounded-lg border border-purple-100 overflow-y-auto text-gray-800">
+{
+  "header": { "frame_id": "lidar_link" },
+  "angle_min": -3.14159,
+  "range_max": 10.0
+}
+                        </pre>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 2: ROUTES VIEW -->
+            <div id="view-routes" class="tab-content space-y-4">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-900">Plan reusable robot routes</h2>
+                    <p class="text-xs text-gray-500">Place, edit, and manage waypoint sequences for the active map.</p>
+                </div>
+
+                <!-- Layer Toggles -->
+                <div class="panel-card flex flex-wrap gap-4 text-xs font-medium border-b">
+                    <label class="flex items-center gap-1.5"><input type="checkbox" checked> Map</label>
+                    <label class="flex items-center gap-1.5"><input type="checkbox"> Costmap G</label>
+                    <label class="flex items-center gap-1.5"><input type="checkbox"> Costmap L</label>
+                    <label class="flex items-center gap-1.5"><input type="checkbox" checked> Path</label>
+                    <label class="flex items-center gap-1.5"><input type="checkbox" checked> Goal</label>
+                    <label class="flex items-center gap-1.5"><input type="checkbox" checked> Waypoints</label>
+                </div>
+
+                <div class="grid grid-cols-12 gap-4">
+                    <!-- Interactive 2D Route Canvas -->
+                    <div class="col-span-8 panel-card h-[450px] flex items-center justify-center relative bg-white border border-gray-300">
+                        <canvas id="routeCanvas" class="w-full h-full"></canvas>
+                        <!-- D-Pad Controls Widget -->
+                        <div class="absolute bottom-4 left-4 bg-white/90 p-2 rounded-xl shadow-lg border border-purple-100 grid grid-cols-3 gap-1 w-28">
+                            <div></div><button class="purple-btn p-1 text-center">▲</button><div></div>
+                            <button class="purple-btn p-1 text-center">◄</button>
+                            <button class="purple-btn p-1 text-center">▼</button>
+                            <button class="purple-btn p-1 text-center">►</button>
+                        </div>
+                    </div>
+
+                    <!-- Route Operations Sidebar -->
+                    <div class="col-span-4 space-y-4">
+                        <div class="panel-card space-y-3">
+                            <h3 class="text-xs font-bold uppercase tracking-wider text-purple-800">Route Operations</h3>
+                            <div class="grid grid-cols-2 gap-2">
+                                <button class="purple-btn-outline text-xs">📍 Edit route</button>
+                                <button class="purple-btn-outline text-xs opacity-50 cursor-not-allowed">💾 Save</button>
+                                <button class="purple-btn-outline text-xs">➕ Create</button>
+                                <button class="purple-btn-outline text-xs">⚡ Change</button>
+                                <button class="purple-btn-outline text-xs">🗺️ Change map</button>
+                                <button class="purple-btn-outline text-xs">📍 Auto-plan</button>
+                            </div>
+                            <button class="w-full red-btn-outline text-xs py-2 bg-red-600 text-white font-bold hover:bg-red-700">🗑️ Delete</button>
+                        </div>
+
+                        <!-- Named Locations Widget -->
+                        <div class="panel-card space-y-3">
+                            <div class="flex justify-between items-center">
+                                <h3 class="text-xs font-bold text-gray-800">▼ Named Locations</h3>
+                                <button class="text-xs border px-2 py-0.5 rounded bg-white">Refresh</button>
+                            </div>
+                            <input type="text" value="Charging Station" class="w-full text-xs border rounded p-2">
+                            <div class="grid grid-cols-3 gap-2 text-xs">
+                                <div><label class="text-[10px] text-gray-400">X</label><input type="text" value="0.5" class="w-full border rounded p-1"></div>
+                                <div><label class="text-[10px] text-gray-400">Y</label><input type="text" value="0" class="w-full border rounded p-1"></div>
+                                <div><label class="text-[10px] text-gray-400">YAW</label><input type="text" value="0" class="w-full border rounded p-1"></div>
+                            </div>
+                            <div class="flex gap-2">
+                                <button class="purple-btn flex-1 text-xs">Save Location</button>
+                                <button class="red-btn-outline flex-1 text-xs">Delete</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 3: MAPS VIEW -->
+            <div id="view-maps" class="tab-content space-y-4">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-900">Maps</h2>
+                    <p class="text-xs text-gray-500">Save, switch, rename and organize the robot's maps.</p>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="panel-card space-y-2">
+                        <h3 class="text-xs font-bold text-purple-800 uppercase">Build a New Map</h3>
+                        <p class="text-xs text-gray-500">Launches SLAM and stops navigation. Drive the robot around the space to build a map.</p>
+                        <button class="border-2 border-orange-400 text-orange-600 font-bold px-4 py-1.5 rounded-lg text-xs hover:bg-orange-50">Start mapping</button>
+                    </div>
+
+                    <div class="panel-card space-y-2">
+                        <h3 class="text-xs font-bold text-purple-800 uppercase">Save Current Map</h3>
+                        <div class="flex gap-2">
+                            <input type="text" placeholder="Map name..." class="flex-1 text-xs border rounded px-3 py-1.5">
+                            <button class="purple-btn text-xs">Save</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 4: PROGRAMS, VOICE & GENERATED PLAN VIEW -->
+            <div id="view-programs" class="tab-content space-y-4">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-900">Programs & Voice Control</h2>
+                    <p class="text-xs text-gray-500">Manage autonomous mission blocks and run history.</p>
+                </div>
+
+                <div class="grid grid-cols-12 gap-4">
+                    <!-- Left: Templates & Voice Control -->
+                    <div class="col-span-6 space-y-4">
+                        <!-- Program Templates -->
+                        <div class="panel-card space-y-2">
+                            <h3 class="text-xs font-bold text-gray-800">▼ Program Templates</h3>
+                            <p class="text-xs text-gray-500">Load a ready-made starter program into the workspace.</p>
+                            <select class="w-full text-xs border rounded p-2 bg-white">
+                                <option>Safe Motion Test</option>
+                                <option>Warehouse Aisle Patrol</option>
+                            </select>
+                            <button class="purple-btn w-full text-xs py-2">Load Template</button>
+                        </div>
+
+                        <!-- Voice Command -->
+                        <div class="panel-card space-y-2">
+                            <h3 class="text-xs font-bold text-gray-800">▼ Voice Command</h3>
+                            <p class="text-xs text-gray-500">Tap to speak, then say "Monsieur" followed by a command.</p>
+                            <button class="purple-btn w-full text-xs py-2.5">Tap to speak a command</button>
+                            <div class="p-2 border rounded text-xs text-gray-400 bg-white">Transcript will appear here</div>
+                        </div>
+
+                        <!-- Plan Checks -->
+                        <div class="panel-card space-y-1">
+                            <h3 class="text-xs font-bold text-gray-800">▼ Plan Checks</h3>
+                            <div class="p-2 bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs rounded-md">
+                                Ready. No validation warnings.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: Generated Plan & Run History -->
+                    <div class="col-span-6 space-y-4">
+                        <!-- Generated Plan -->
+                        <div class="panel-card space-y-2">
+                            <div class="flex justify-between items-center">
+                                <h3 class="text-xs font-bold text-gray-800">▼ Generated Plan</h3>
+                                <span class="text-xs text-gray-400">3 steps</span>
+                            </div>
+                            <div class="space-y-2">
+                                <div class="p-2.5 bg-white border rounded-lg text-xs space-y-1">
+                                    <div>1. Navigate to x 0, y 0, yaw 0</div>
+                                    <span class="px-2 py-0.5 bg-purple-100 text-purple-700 text-[10px] font-bold rounded">QUEUED</span>
+                                </div>
+                                <div class="p-2.5 bg-white border rounded-lg text-xs space-y-1">
+                                    <div>2. Wait for navigation complete, timeout 60s</div>
+                                    <span class="px-2 py-0.5 bg-purple-100 text-purple-700 text-[10px] font-bold rounded">QUEUED</span>
+                                </div>
+                                <div class="p-2.5 bg-white border rounded-lg text-xs space-y-1">
+                                    <div>3. Wait 2s</div>
+                                    <span class="px-2 py-0.5 bg-purple-100 text-purple-700 text-[10px] font-bold rounded">QUEUED</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Run History -->
+                        <div class="panel-card space-y-2">
+                            <div class="flex justify-between items-center">
+                                <h3 class="text-xs font-bold text-gray-800">▼ Run History</h3>
+                                <div class="space-x-1">
+                                    <button class="text-xs border px-2 py-0.5 rounded bg-white">Refresh</button>
+                                    <button class="text-xs border border-red-300 text-red-600 px-2 py-0.5 rounded bg-white">Clear</button>
+                                </div>
+                            </div>
+                            <div class="space-y-2">
+                                <div class="p-2.5 bg-white border rounded-lg flex justify-between items-center">
+                                    <div>
+                                        <div class="text-xs font-bold text-gray-800">Safe Motion Test</div>
+                                        <div class="text-[10px] text-gray-400">7/5/2026, 5:40:40 PM · 2/2 steps</div>
+                                    </div>
+                                    <span class="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] font-bold rounded">SUCCESS</span>
+                                </div>
+                                <div class="p-2.5 bg-white border rounded-lg flex justify-between items-center">
+                                    <div>
+                                        <div class="text-xs font-bold text-gray-800">Safe Motion Test</div>
+                                        <div class="text-[10px] text-gray-400">7/5/2026, 5:01:20 PM · 2/2 steps</div>
+                                    </div>
+                                    <span class="px-2 py-0.5 bg-amber-100 text-amber-700 text-[10px] font-bold rounded">STOPPED</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Tab Switching Logic -->
+    <script>
+        function switchTab(tabId) {
+            // Hide all tab views
+            document.querySelectorAll('.tab-content').forEach(view => view.classList.remove('active'));
+            // Remove active style from sidebar links
+            document.querySelectorAll('.sidebar-item').forEach(item => item.classList.remove('active'));
+            
+            // Activate selected view and navigation link
+            document.getElementById(`view-${tabId}`).classList.add('active');
+            document.getElementById(`nav-${tabId}`).classList.add('active');
+        }
+    </script>
+</body>
+</html>
